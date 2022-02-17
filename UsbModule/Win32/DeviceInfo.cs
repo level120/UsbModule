@@ -8,21 +8,28 @@ public readonly struct DeviceInfo
     /// <summary>
     /// Initializes a new instance of the <see cref="DeviceInfo"/> struct.
     /// </summary>
-    /// <param name="name">name.</param>
-    /// <param name="value">value.</param>
-    public DeviceInfo(string? name, string? value)
+    /// <param name="path">path.</param>
+    /// <param name="description">description.</param>
+    /// <param name="port">port.</param>
+    public DeviceInfo(string? path, string? description, string? port)
     {
-        Name = name;
-        Value = value;
+        Path = path;
+        Description = description;
+        Port = port;
     }
 
     /// <summary>
-    /// Name.
+    /// Path.
     /// </summary>
-    public string? Name { get; }
+    public string? Path { get; }
 
     /// <summary>
-    /// Value.
+    /// Description.
     /// </summary>
-    public string? Value { get; }
+    public string? Description { get; }
+
+    /// <summary>
+    /// Port.
+    /// </summary>
+    public string? Port { get; }
 }

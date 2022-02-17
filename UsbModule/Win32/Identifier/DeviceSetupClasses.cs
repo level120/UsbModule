@@ -3,10 +3,10 @@ using System.Runtime.Versioning;
 namespace UsbModule.Win32.Identifier;
 
 /// <summary>
-/// Windows에서 제공하는 USB 식별자.
+/// Windows에서 제공하는 식별자.
 /// </summary>
 [SupportedOSPlatform("windows")]
-public static class SupportGuids
+public static class DeviceSetupClasses
 {
     /// <summary>
     /// USB Printer의 식별자<br/>

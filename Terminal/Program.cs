@@ -5,6 +5,17 @@ var name = "MIP-001";
 
 var id = "3A21";
 
-using var manager = UsbCommunicationManager.Open(SupportGuids.UsbPrinter, name, id);
+var command = new byte[]
+{
+    0x1d, 0x49, 0x02,
+};
 
-Console.Write(manager.Handle.ToString());
+using var manager = UsbCommunicationManager.Open(DeviceSetupClasses.UsbPrinter, name, id);
+
+var write = manager.Write(command);
+
+Console.Write(write);
+
+var read = manager.Read();
+
+Console.Write(read);

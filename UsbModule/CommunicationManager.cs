@@ -56,12 +56,19 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <param name="interfaceName">장치 이름.</param>
     /// <param name="productId">장치 ID.</param>
     /// <returns><see cref="UsbCommunicationManager"/>.</returns>
-    public static UsbCommunicationManager Open(
+    public static UsbCommunicationManager? Open(
         Guid interfaceClassGuid, string? interfaceName, string? productId)
     {
+        var handle = GetHandle(interfaceClassGuid, interfaceName, productId);
+
+        if (handle == IntPtr.Zero)
+        {
+            return null;
+        }
+
         return new UsbCommunicationManager
         {
-            Handle = GetHandle(interfaceClassGuid, interfaceName, productId),
+            Handle = handle,
             ClassId = interfaceClassGuid,
             InterfaceName = interfaceName,
             ProductID = productId,
@@ -69,15 +76,115 @@ public sealed class UsbCommunicationManager : IDisposable
     }
 
     /// <summary>
+    /// 해당 식별자를 갖는 USB 장치 목록들을 반환합니다.
+    /// </summary>
+    /// <param name="interfaceClassGuid">장치 인터페이스 형식 ID.</param>
+    /// <param name="flags">flags.</param>
+    /// <returns>장치 목록 Dictionary.</returns>
+    /// <exception cref="Win32Exception">장치 식별 실패 시.</exception>
+    public static Dictionary<string, DeviceInfo> GetDevices(Guid interfaceClassGuid, SetupApi.Digcf flags)
+    {
+        var devices = new Dictionary<string, DeviceInfo>();
+
+        IntPtr device;
+
+        try
+        {
+            device = SetupApi.SetupDiGetClassDevs(ref interfaceClassGuid, null, IntPtr.Zero, (uint)flags);
+        }
+        catch
+        {
+            device = (IntPtr)FileIO.InvalidHandleValue;
+        }
+
+        if (device == (IntPtr)FileIO.InvalidHandleValue)
+        {
+            return devices;
+        }
+
+        var deviceIndex = default(uint);
+        var deviceInterfaceData = new SetupApi.SpDeviceInterfaceData();
+
+        try
+        {
+            while (SetupApi.SetupDiEnumDeviceInterfaces(device, 0, ref interfaceClassGuid, deviceIndex, ref deviceInterfaceData))
+            {
+                ++deviceIndex;
+
+                SetupApi.SetupDiGetDeviceInterfaceDetail(
+                    device, ref deviceInterfaceData, IntPtr.Zero, 0, out var size, IntPtr.Zero);
+
+                if (size == 0 || size > Marshal.SizeOf(typeof(SetupApi.SpDeviceInterfaceDetailData)) - sizeof(uint))
+                {
+                    continue;
+                }
+
+                var interfaceDetail = new SetupApi.SpDeviceInterfaceDetailData();
+                var devInfoData = new SetupApi.SpDevInfoData();
+
+                var isSuccess = SetupApi.SetupDiGetDeviceInterfaceDetail(
+                    device, ref deviceInterfaceData, ref interfaceDetail, size, out _, ref devInfoData);
+
+                if (!isSuccess)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                var path = interfaceDetail.DevicePath;
+                var name = Win32Api.GetDeviceRegistryProperty(
+                    device, ref devInfoData, SetupApi.Spdrp.LocationInformation);
+
+                var desc = string.Empty;
+                var port = string.Empty;
+
+                if (path!.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    var key = string.Concat("##?#", path.AsSpan(4));
+
+                    try
+                    {
+                        using var regKey = Registry.LocalMachine.OpenSubKey(
+                            $"SYSTEM\\CurrentControlSet\\Control\\DeviceClasses\\{interfaceClassGuid:B}");
+
+                        using var subKey = regKey?.OpenSubKey(key);
+
+                        if (subKey != null)
+                        {
+                            using var entryKey = subKey.OpenSubKey("#\\Device Parameters");
+
+                            desc = entryKey?.GetValue("Port Description")?.ToString();
+                            port = entryKey?.GetValue("Port Number")?.ToString();
+                        }
+                    }
+                    catch
+                    {
+                        // do nothing
+                    }
+                }
+
+                devices[name] = new DeviceInfo(path, desc, port);
+            }
+
+            SetupApi.SetupDiDestroyDeviceInfoList(device);
+        }
+        catch
+        {
+            // ignore
+        }
+
+        return devices;
+    }
+
+    /// <summary>
     /// buffer 데이터를 USB에 전달합니다.
     /// </summary>
     /// <param name="buffer">데이터 버퍼.</param>
-    /// <returns>전달된 데이터의 크기.</returns>
-    public int Write(params byte[] buffer)
+    /// <returns>작업수행 결과.</returns>
+    public bool Write(params byte[] buffer)
     {
         if (Handle == IntPtr.Zero)
         {
-            return 0;
+            return false;
         }
 
         FileIO.CancelIo(Handle);
@@ -89,18 +196,17 @@ public sealed class UsbCommunicationManager : IDisposable
         var ov = new NativeOverlapped
         {
 #pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
-            EventHandle = wo.SafeWaitHandle.DangerousGetHandle(),
+            EventHandle = wo.GetSafeWaitHandle().DangerousGetHandle(),
 #pragma warning restore S3869 // "SafeHandle.DangerousGetHandle" should not be called
         };
 
-        if (!FileIO.WriteFile(Handle, bytes, (uint)bytes.Length, out _, ref ov) && Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
+        if (!FileIO.WriteFile(Handle, bytes, (uint)bytes.Length, out _, ref ov) &&
+            Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
         {
             wo.WaitOne(Timeout, false);
         }
 
-        FileIO.GetOverlappedResult(Handle, ref ov, out var size, true);
-
-        return (int)size;
+        return FileIO.GetOverlappedResult(Handle, ref ov, out var size, true) && size > 0;
     }
 
     /// <summary>
@@ -123,7 +229,7 @@ public sealed class UsbCommunicationManager : IDisposable
             OffsetLow = 0,
             OffsetHigh = 0,
 #pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
-            EventHandle = sg.SafeWaitHandle.DangerousGetHandle(),
+            EventHandle = sg.GetSafeWaitHandle().DangerousGetHandle(),
 #pragma warning restore S3869 // "SafeHandle.DangerousGetHandle" should not be called
         };
 
@@ -179,9 +285,10 @@ public sealed class UsbCommunicationManager : IDisposable
             return IntPtr.Zero;
         }
 
-        var devicePath = GetDevices(interfaceClassGuid, presentOnly: true, fullDetail: false)
-            .Find(device => device.Name?.Contains(productId, StringComparison.OrdinalIgnoreCase) ?? false)
-            .Name;
+        var devices = GetDevices(interfaceClassGuid, SetupApi.Digcf.DeviceInterface | SetupApi.Digcf.Present);
+        var devicePath = devices
+            .FirstOrDefault(device => device.Value.Path?.Contains(productId, StringComparison.OrdinalIgnoreCase) ?? false)
+            .Key;
 
         if (string.IsNullOrEmpty(devicePath))
         {
@@ -196,105 +303,5 @@ public sealed class UsbCommunicationManager : IDisposable
             FileIO.FileCreationDisposition.OpenAlways,
             FileIO.FileAttributes.Normal | FileIO.FileAttributes.SequentialScan | FileIO.FileAttributes.Overlapped,
             IntPtr.Zero);
-    }
-
-    private static List<DeviceInfo> GetDevices(Guid interfaceClassGuid, bool presentOnly)
-    {
-        var devices = new List<DeviceInfo>();
-
-        var flags = SetupApi.Digcf.DeviceInterface;
-
-        if (presentOnly)
-        {
-            flags |= SetupApi.Digcf.Present;
-        }
-
-        IntPtr device;
-
-        try
-        {
-            device = SetupApi.SetupDiGetClassDevs(ref interfaceClassGuid, null, IntPtr.Zero, flags);
-        }
-        catch
-        {
-            device = (IntPtr)FileIO.InvalidHandleValue;
-        }
-
-        if (device == (IntPtr)FileIO.InvalidHandleValue)
-        {
-            return devices;
-        }
-
-        var deviceIndex = default(uint);
-        var deviceInterfaceData = new SetupApi.SpDeviceInterfaceData();
-
-        try
-        {
-            while (SetupApi.SetupDiEnumDeviceInterfaces(device, 0, ref interfaceClassGuid, deviceIndex, ref deviceInterfaceData))
-            {
-                ++deviceIndex;
-
-                SetupApi.SetupDiGetDeviceInterfaceDetail(device, ref deviceInterfaceData, IntPtr.Zero, 0, out var size, IntPtr.Zero);
-
-                if (size == 0 || size > Marshal.SizeOf(typeof(SetupApi.SpDeviceInterfaceDetailData)) - sizeof(uint))
-                {
-                    continue;
-                }
-
-                var interfaceDetail = new SetupApi.SpDeviceInterfaceDetailData();
-                var devInfoData = new SetupApi.SpDevInfoData();
-
-                var isSuccess = SetupApi.SetupDiGetDeviceInterfaceDetail(
-                    device, ref deviceInterfaceData, ref interfaceDetail, size, out _, ref devInfoData);
-
-                if (!isSuccess)
-                {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                }
-
-                var path = interfaceDetail.DevicePath;
-                var name = Win32Api.GetDeviceRegistryProperty(device, ref devInfoData, SetupApi.Spdrp.LocationInformation);
-
-                var desc = string.Empty;
-                var port = string.Empty;
-
-                if (path!.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    var key = string.Concat("##?#", path.AsSpan(4));
-
-                    try
-                    {
-                        using var regKey = Registry.LocalMachine.OpenSubKey(
-                            $"SYSTEM\\CurrentControlSet\\Control\\DeviceClasses\\{interfaceClassGuid:B}");
-
-                        using var subKey = regKey?.OpenSubKey(key);
-
-                        if (subKey != null)
-                        {
-                            using var entryKey = subKey.OpenSubKey("#\\Device Parameters");
-
-                            desc = entryKey?.GetValue("Port Description")?.ToString();
-                            port = entryKey?.GetValue("Port Number")?.ToString();
-                        }
-                    }
-                    catch
-                    {
-                        // do nothing
-                    }
-                }
-
-                devices.Add(new DeviceInfo(name, path));
-                devices.Add(new DeviceInfo(name, desc));
-                devices.Add(new DeviceInfo(name, port));
-            }
-
-            SetupApi.SetupDiDestroyDeviceInfoList(device);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        return devices;
     }
 }

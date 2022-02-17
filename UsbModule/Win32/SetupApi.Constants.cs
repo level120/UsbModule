@@ -11,37 +11,6 @@ public partial class SetupApi
     private const string LibraryDll = "setupapi.dll";
 
     /// <summary>
-    /// DIGCF.
-    /// </summary>
-    public static class Digcf
-    {
-        /// <summary>
-        /// Only valid with DIGCF_DEVICEINTERFACE.
-        /// </summary>
-        public const uint Default = 0x00000001;
-
-        /// <summary>
-        /// Present.
-        /// </summary>
-        public const uint Present = 0x00000002;
-
-        /// <summary>
-        /// All classes.
-        /// </summary>
-        public const uint AllClasses = 0x00000004;
-
-        /// <summary>
-        /// Profile.
-        /// </summary>
-        public const uint Profile = 0x00000008;
-
-        /// <summary>
-        /// Device interface.
-        /// </summary>
-        public const uint DeviceInterface = 0x00000010;
-    }
-
-    /// <summary>
     /// SPDRP.
     /// </summary>
     public static class Spdrp
@@ -155,6 +124,10 @@ public partial class SetupApi
         /// BusNumber (R).
         /// </summary>
         public const uint BusNumber = 0x00000015;
+
+        /// <summary>
+        /// EnumeratorName.
+        /// </summary>
         public const uint EnumeratorName = 0x00000016;
 
         /// <summary>
