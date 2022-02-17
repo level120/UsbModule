@@ -1,0 +1,193 @@
+# EditorConfig 을 이해하는데 참고할 만한 자료 목록
+# 1. EditorConfig (https://EditorConfig.org)
+# 2. EditorConfig Specification (https://editorconfig-specification.readthedocs.io/)
+# 3. Example file (https://editorconfig.org/#example-file)
+# 4. Code style rule options (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options)
+# 5. EditorConfig Reference for C# Developers (https://kent-boogaart.com/blog/editorconfig-reference-for-c-developers)
+
+# Severity : error, warning, suggestion, silent, none, default (https://docs.microsoft.com/en-us/visualstudio/code-quality/use-roslyn-analyzers)
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = unset
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+# 1. Severity level
+
+# Default severity for all analyzer diagnostics
+dotnet_analyzer_diagnostic.severity = error
+
+# 1.1. Roslyn(.NET compiler platform) Analyzers (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/overview)
+
+# CA1305: Specify IFormatProvider
+# https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1305
+dotnet_diagnostic.CA1305.severity = warning
+
+# CA1014 : Mark assemblies with CLSCompliantAttribute
+# https://docs.microsoft.com/ko-kr/dotnet/fundamentals/code-analysis/quality-rules/ca1014
+# 2022.02.11. [구삼] 이 속성은 프로그램의 요소가 언어별 공용 표준 사양을 준수하는지 나타내는지 확인합니다.
+# 그런데 Mango에서 작업한 추상화 된 객체 및 내부에서 사용하는 인터페이스도 이 사양에 걸려 생산성을 크게 떨어뜨려 None으로 변경합니다.
+dotnet_diagnostic.CA1014.severity = none
+
+# IDE0046: Convert to conditional expression
+# 2022.02.08 [예건] conditional expression 이 if 문보다 가독성이 좋지 않은 경우가 있어, 강제하지 않도록 변경했습니다.
+dotnet_diagnostic.IDE0046.severity = suggestion
+
+# IDE0058: Expression value is never used
+# 2021.11.29 [예건] TODO 비효율적인 부분이 있어, silent 로 처리했다. (https://github.com/dotnet/roslyn/issues/47832)
+dotnet_diagnostic.IDE0058.severity = silent
+
+# IDE0060: Remove unused parameter
+# 2022.02.10 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2131898
+dotnet_diagnostic.IDE0060.severity = warning
+
+# IDE0130: Namespace does not match folder structure
+# 2021.11.29 [예건] TODO Roslyn 이 file-scoped namespaces 를 처리하지 못해 none 로 설정했다. (https://github.com/dotnet/roslyn/issues/54749)
+dotnet_diagnostic.IDE0130.severity = none
+
+# 1.2. Sonar Analyzers (https://rules.sonarsource.com/csharp)
+
+# S125: Sections of code should not be commented out
+# 2022.01.24 [예건] 개발 편의를 위해 코드를 주석처리할 수 있도록 규칙을 무력화합니다.
+dotnet_diagnostic.S125.severity = none
+
+# S1135: Track uses of "TODO" tags
+dotnet_diagnostic.S1135.severity = warning
+
+# 1.3. StyleCop Analyzers (https://github.com/DotNetAnalyzers/StyleCopAnalyzers/tree/master/documentation)
+
+# SA1005: Single line comment should begin with a space
+dotnet_diagnostic.SA1005.severity = suggestion
+
+# SA1101: Prefix local calls with this
+dotnet_diagnostic.SA1101.severity = silent
+
+# SA1200: Using directives should be placed correctly
+dotnet_diagnostic.SA1200.severity = silent
+
+# SA1309: Field names should not begin with underscore
+dotnet_diagnostic.SA1309.severity = silent
+
+# SA1512: Single-line comments should not be followed by blank line
+# 2022.02.10 [예건] 코드를 주석처리하고 테스트할 때, 방해되어 warning으로 조정합니다.
+dotnet_diagnostic.SA1512.severity = warning
+
+# SA1600: Elements should be documented
+dotnet_diagnostic.SA1600.severity = warning
+
+# SA1623: Property summary documentation should match accessors
+dotnet_diagnostic.SA1623.severity = none
+
+# SA1625: Element documentation should not be copied and pasted
+dotnet_diagnostic.SA1625.severity = none
+
+# SA1633: File should have header
+dotnet_diagnostic.SA1633.severity = none
+
+# SA1642: Constructor summary documentation should begin with standard text
+dotnet_diagnostic.SA1642.severity = none
+
+# 1.4 Roslynator Analyzers
+
+# RCS1161: Enum should declare explicit values.
+# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
+dotnet_diagnostic.RCS1161.severity = none
+
+# 1.4. Roslynator Analyzers
+
+# RCS1161: Enum should declare explicit values.
+# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
+dotnet_diagnostic.RCS1161.severity = none
+
+# RCS1163: Unused parameter.
+# 2022.02.10 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2131898
+dotnet_diagnostic.RCS1163.severity = warning
+
+# 1.4. Roslynator Analyzers
+
+# RCS1161: Enum should declare explicit values.
+# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
+dotnet_diagnostic.RCS1161.severity = none
+
+# RCS1181: Convert comment to documentation comment.
+# 2022.02.10 [예건] 코드 위 주석이 반드시 문서 주석일 필요는 없습니다.
+dotnet_diagnostic.RCS1181.severity = suggestion
+
+# 2. Language rules (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/language-rules)
+# Language rules 은 default 가 있으므로, 예외만 수정한다.
+
+# 3. Formatting rules (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/formatting-rules)
+# Formatting rules 은 default 가 없으므로, 지정한다.
+
+# (https://docs.microsoft.com/ko-kr/dotnet/fundamentals/code-analysis/style-rules/ide0007-ide0008)
+# ‘var’ preferences (IDE0007 and IDE0008)
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+
+# Organize using directives
+dotnet_sort_system_directives_first = false
+dotnet_separate_import_directive_groups = false
+
+# Dotnet namespace options
+dotnet_style_namespace_match_folder = false
+
+# Newline options
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# Indentation options
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+csharp_indent_case_contents_when_block = true
+
+# Spacing options
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_parentheses = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_declaration_name_and_open_parenthesis = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_dot = false
+csharp_space_before_dot = false
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_before_semicolon_in_for_statement = false
+csharp_space_around_declaration_statements = false
+csharp_space_before_open_square_brackets = false
+csharp_space_between_empty_square_brackets = false
+csharp_space_between_square_brackets = false
+
+# Wrap options
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# Using directive options
+csharp_using_directive_placement = outside_namespace
+
+# Namespace options
+csharp_style_namespace_declarations = file_scoped
+
+# 4. Naming rules (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/naming-rules)
+# Naming rules 은 default 가 있으므로, 예외만 수정한다.
