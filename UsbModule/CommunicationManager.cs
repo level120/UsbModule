@@ -5,6 +5,8 @@ using System.Runtime.Versioning;
 using UsbModule.Win32;
 using UsbModule.Win32.IO;
 
+#pragma warning disable SA1129 // Do not use default value type constructor
+
 namespace UsbModule;
 
 /// <summary>
@@ -224,10 +226,7 @@ public sealed class UsbCommunicationManager : IDisposable
         }
 
         var deviceIndex = default(uint);
-        var deviceInterfaceData = new SetupApi.SpDeviceInterfaceData
-        {
-            CbSize = Marshal.SizeOf(typeof(SetupApi.SpDeviceInterfaceData)),
-        };
+        var deviceInterfaceData = new SetupApi.SpDeviceInterfaceData();
 
         try
         {
@@ -242,15 +241,8 @@ public sealed class UsbCommunicationManager : IDisposable
                     continue;
                 }
 
-                var interfaceDetail = new SetupApi.SpDeviceInterfaceDetailData
-                {
-                    CbSize = sizeof(uint) + sizeof(char),
-                };
-
-                var devInfoData = new SetupApi.SpDevInfoData
-                {
-                    CbSize = Marshal.SizeOf(typeof(SetupApi.SpDevInfoData)),
-                };
+                var interfaceDetail = new SetupApi.SpDeviceInterfaceDetailData();
+                var devInfoData = new SetupApi.SpDevInfoData();
 
                 var isSuccess = SetupApi.SetupDiGetDeviceInterfaceDetail(
                     device, ref deviceInterfaceData, ref interfaceDetail, size, null, ref devInfoData);

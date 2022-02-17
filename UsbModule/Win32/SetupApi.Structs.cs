@@ -18,7 +18,7 @@ public partial class SetupApi
         /// <summary>
         /// Size of structure in bytes.
         /// </summary>
-        public int CbSize;
+        public int CbSize = Marshal.SizeOf(typeof(SpDevInfoData));
 
         /// <summary>
         /// GUID of the device interface class.
@@ -33,7 +33,7 @@ public partial class SetupApi
         /// <summary>
         /// Reserved; do not use.
         /// </summary>
-        public UIntPtr Reserved;
+        public IntPtr Reserved;
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public partial class SetupApi
         /// <summary>
         /// Size of the structure, in bytes.
         /// </summary>
-        public int CbSize;
+        public int CbSize = Marshal.SizeOf(typeof(SpDeviceInterfaceData));
 
         /// <summary>
         /// GUID of the device interface class.
@@ -60,24 +60,24 @@ public partial class SetupApi
         /// <summary>
         /// Reserved; do not use.
         /// </summary>
-        public UIntPtr Reserved;
+        public IntPtr Reserved;
     }
 
     /// <summary>
     /// SP_DEVICE_INTERFACE_DETAIL_DATA.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 2)]
     public struct SpDeviceInterfaceDetailData
     {
         /// <summary>
         /// Size of the structure, in bytes.
         /// </summary>
-        public uint CbSize;
+        public uint CbSize = (uint)Marshal.SizeOf(typeof(SpDeviceInterfaceDetailData));
 
         /// <summary>
         ///  Note: Will never be more than 265 in length.
         /// </summary>
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string DevicePath;
+        public string? DevicePath;
     }
 }
