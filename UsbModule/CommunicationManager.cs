@@ -198,7 +198,7 @@ public sealed class UsbCommunicationManager : IDisposable
             IntPtr.Zero);
     }
 
-    private static List<DeviceInfo> GetDevices(Guid interfaceClassGuid, bool presentOnly, bool fullDetail)
+    private static List<DeviceInfo> GetDevices(Guid interfaceClassGuid, bool presentOnly)
     {
         var devices = new List<DeviceInfo>();
 
@@ -234,7 +234,7 @@ public sealed class UsbCommunicationManager : IDisposable
             {
                 ++deviceIndex;
 
-                SetupApi.SetupDiGetDeviceInterfaceDetail(device, ref deviceInterfaceData, null, 0, out var size, null);
+                SetupApi.SetupDiGetDeviceInterfaceDetail(device, ref deviceInterfaceData, IntPtr.Zero, 0, out var size, IntPtr.Zero);
 
                 if (size == 0 || size > Marshal.SizeOf(typeof(SetupApi.SpDeviceInterfaceDetailData)) - sizeof(uint))
                 {
@@ -245,7 +245,7 @@ public sealed class UsbCommunicationManager : IDisposable
                 var devInfoData = new SetupApi.SpDevInfoData();
 
                 var isSuccess = SetupApi.SetupDiGetDeviceInterfaceDetail(
-                    device, ref deviceInterfaceData, ref interfaceDetail, size, null, ref devInfoData);
+                    device, ref deviceInterfaceData, ref interfaceDetail, size, out _, ref devInfoData);
 
                 if (!isSuccess)
                 {
@@ -255,16 +255,10 @@ public sealed class UsbCommunicationManager : IDisposable
                 var path = interfaceDetail.DevicePath;
                 var name = Win32Api.GetDeviceRegistryProperty(device, ref devInfoData, SetupApi.Spdrp.LocationInformation);
 
-                if (!fullDetail)
-                {
-                    devices.Add(new DeviceInfo(name, path));
-                    continue;
-                }
-
                 var desc = string.Empty;
                 var port = string.Empty;
 
-                if (path.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+                if (path!.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
                 {
                     var key = string.Concat("##?#", path.AsSpan(4));
 

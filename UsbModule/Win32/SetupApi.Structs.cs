@@ -66,13 +66,13 @@ public partial class SetupApi
     /// <summary>
     /// SP_DEVICE_INTERFACE_DETAIL_DATA.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 2)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     public struct SpDeviceInterfaceDetailData
     {
         /// <summary>
         /// Size of the structure, in bytes.
         /// </summary>
-        public uint CbSize = (uint)Marshal.SizeOf(typeof(SpDeviceInterfaceDetailData));
+        public uint CbSize = IntPtr.Size == 8 ? 8 : (uint)(4 + Marshal.SystemDefaultCharSize); // (uint)Marshal.SizeOf(typeof(SpDeviceInterfaceDetailData));
 
         /// <summary>
         ///  Note: Will never be more than 265 in length.

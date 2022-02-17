@@ -34,7 +34,7 @@ public static class Win32Api
         var buffer = new char[(int)size];
 
         var isSuccess = SetupApi.SetupDiGetDeviceRegistryProperty(
-            hDevInfo, ref deviceInfoData, property, null, buffer, size, null);
+            hDevInfo, ref deviceInfoData, property, out _, buffer, size, out _);
 
         if (!isSuccess)
         {
