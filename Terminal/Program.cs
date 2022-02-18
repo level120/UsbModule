@@ -1,3 +1,4 @@
+using System.Text;
 using UsbModule;
 using UsbModule.Win32.Identifier;
 
@@ -18,4 +19,4 @@ Console.Write(write);
 
 var read = manager.Read();
 
-Console.Write(read);
+Console.Write(Encoding.Default.GetString(read));

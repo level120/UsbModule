@@ -1,3 +1,4 @@
+using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -10,7 +11,7 @@ namespace UsbModule.Win32.IO;
 public partial class FileIO
 {
     [DllImport(LibraryDll, SetLastError = true, CharSet = CharSet.Unicode)]
-    internal static extern IntPtr CreateFile(
+    internal static extern SafeFileHandle CreateFile(
         string lpFileName,
         FileAccess dwDesiredAccess,
         FileShareMode dwShareMode,
@@ -18,9 +19,6 @@ public partial class FileIO
         FileCreationDisposition dwCreationDisposition,
         FileAttributes dwFlagsAndAttributes,
         IntPtr hTemplateFile);
-
-    [DllImport(LibraryDll, SetLastError = true)]
-    internal static extern bool CloseHandle(IntPtr hObject);
 
     [DllImport(LibraryDll, SetLastError = true)]
     internal static extern bool GetOverlappedResult(

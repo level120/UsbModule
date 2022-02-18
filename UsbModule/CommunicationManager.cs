@@ -1,10 +1,12 @@
 using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using UsbModule.Win32;
 using UsbModule.Win32.IO;
 
+#pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
 #pragma warning disable SA1129 // Do not use default value type constructor
 
 namespace UsbModule;
@@ -47,7 +49,7 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <summary>
     /// Handle.
     /// </summary>
-    public IntPtr Handle { get; private set; }
+    public SafeFileHandle? Handle { get; private set; }
 
     /// <summary>
     /// 입력한 인자정보를 이용해 USB 통신 환경을 구성합니다.
@@ -61,7 +63,7 @@ public sealed class UsbCommunicationManager : IDisposable
     {
         var handle = GetHandle(interfaceClassGuid, interfaceName, productId);
 
-        if (handle == IntPtr.Zero)
+        if (handle?.IsInvalid != false)
         {
             return null;
         }
@@ -182,12 +184,9 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <returns>작업수행 결과.</returns>
     public bool Write(params byte[] buffer)
     {
-        if (Handle == IntPtr.Zero)
-        {
-            return false;
-        }
+        var handle = Handle!.DangerousGetHandle();
 
-        FileIO.CancelIo(Handle);
+        FileIO.CancelIo(handle);
 
         var bytes = new byte[buffer.Length];
         Array.Copy(buffer, 0, bytes, 0, buffer.Length);
@@ -195,18 +194,16 @@ public sealed class UsbCommunicationManager : IDisposable
         var wo = new ManualResetEvent(false);
         var ov = new NativeOverlapped
         {
-#pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
             EventHandle = wo.GetSafeWaitHandle().DangerousGetHandle(),
-#pragma warning restore S3869 // "SafeHandle.DangerousGetHandle" should not be called
         };
 
-        if (!FileIO.WriteFile(Handle, bytes, (uint)bytes.Length, out _, ref ov) &&
+        if (!FileIO.WriteFile(handle, bytes, (uint)bytes.Length, out _, ref ov) &&
             Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
         {
             wo.WaitOne(Timeout, false);
         }
 
-        return FileIO.GetOverlappedResult(Handle, ref ov, out var size, true) && size > 0;
+        return FileIO.GetOverlappedResult(handle, ref ov, out var size, true) && size == buffer.LongLength;
     }
 
     /// <summary>
@@ -215,10 +212,7 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <returns>수신된 데이터.</returns>
     public byte[] Read()
     {
-        if (Handle == IntPtr.Zero)
-        {
-            return Array.Empty<byte>();
-        }
+        var handle = Handle!.DangerousGetHandle();
 
         var readBuffer = new byte[BufferSize];
         Array.Clear(readBuffer, 0, readBuffer.Length);
@@ -228,18 +222,16 @@ public sealed class UsbCommunicationManager : IDisposable
         {
             OffsetLow = 0,
             OffsetHigh = 0,
-#pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
             EventHandle = sg.GetSafeWaitHandle().DangerousGetHandle(),
-#pragma warning restore S3869 // "SafeHandle.DangerousGetHandle" should not be called
         };
 
-        if (!FileIO.ReadFile(Handle, readBuffer, BufferSize, out _, ref ov) &&
+        if (!FileIO.ReadFile(handle, readBuffer, BufferSize, out _, ref ov) &&
             Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
         {
             sg.WaitOne(Timeout, false);
         }
 
-        FileIO.GetOverlappedResult(Handle, ref ov, out var readLength, false);
+        FileIO.GetOverlappedResult(handle, ref ov, out var readLength, false);
 
         var readData = new byte[readLength];
         Array.Copy(readBuffer, readData, readLength);
@@ -252,10 +244,10 @@ public sealed class UsbCommunicationManager : IDisposable
     /// </summary>
     public void Close()
     {
-        if ((int)Handle > 0)
+        if (Handle?.IsClosed == false)
         {
-            FileIO.CloseHandle(Handle);
-            Handle = IntPtr.Zero;
+            Handle.Dispose();
+            Handle = null;
         }
     }
 
@@ -267,7 +259,7 @@ public sealed class UsbCommunicationManager : IDisposable
         Close();
     }
 
-    private static IntPtr GetHandle(Guid interfaceClassGuid, string? interfaceName, string? productId)
+    private static SafeFileHandle? GetHandle(Guid interfaceClassGuid, string? interfaceName, string? productId)
     {
         if (string.IsNullOrWhiteSpace(interfaceName))
         {
@@ -282,17 +274,18 @@ public sealed class UsbCommunicationManager : IDisposable
         // 네트워크 주소?
         if (interfaceName.StartsWith("\\", StringComparison.InvariantCultureIgnoreCase))
         {
-            return IntPtr.Zero;
+            return null;
         }
 
-        var devices = GetDevices(interfaceClassGuid, SetupApi.Digcf.DeviceInterface | SetupApi.Digcf.Present);
+        var devices = GetDevices(interfaceClassGuid, SetupApi.Digcf.DeviceInterface | SetupApi.Digcf.AllClasses);
         var devicePath = devices
             .FirstOrDefault(device => device.Value.Path?.Contains(productId, StringComparison.OrdinalIgnoreCase) ?? false)
-            .Key;
+            .Value
+            .Path;
 
         if (string.IsNullOrEmpty(devicePath))
         {
-            return IntPtr.Zero;
+            return null;
         }
 
         return FileIO.CreateFile(
