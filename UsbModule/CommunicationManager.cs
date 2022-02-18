@@ -143,8 +143,9 @@ public sealed class UsbCommunicationManager : IDisposable
                 var name = Win32Api.GetDeviceRegistryProperty(
                     device, ref devInfoData, SetupApi.Spdrp.LocationInformation);
 
+                var portName = string.Empty;
                 var desc = string.Empty;
-                var port = string.Empty;
+                var port = 0;
 
                 if (path!.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
                 {
@@ -161,8 +162,10 @@ public sealed class UsbCommunicationManager : IDisposable
                         {
                             using var entryKey = subKey.OpenSubKey("#\\Device Parameters");
 
-                            desc = entryKey?.GetValue("Port Description")?.ToString();
-                            port = entryKey?.GetValue("Port Number")?.ToString();
+                            var originBaseName = entryKey!.GetValue("Base Name")?.ToString();
+                            desc = entryKey.GetValue("Port Description")!.ToString();
+                            port = (int)entryKey.GetValue("Port Number")!;
+                            portName = $"{originBaseName}{port:00#}";
                         }
                     }
                     catch
@@ -171,7 +174,7 @@ public sealed class UsbCommunicationManager : IDisposable
                     }
                 }
 
-                devices[name] = new DeviceInfo(path, desc, port);
+                devices[name] = new DeviceInfo(path, portName, desc, port);
             }
 
             SetupApi.SetupDiDestroyDeviceInfoList(device);

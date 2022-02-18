@@ -9,13 +9,15 @@ public readonly struct DeviceInfo : IEquatable<DeviceInfo>
     /// Initializes a new instance of the <see cref="DeviceInfo"/> struct.
     /// </summary>
     /// <param name="path">path.</param>
+    /// <param name="portName">base name.</param>
     /// <param name="description">description.</param>
     /// <param name="port">port.</param>
-    public DeviceInfo(string? path, string? description, string? port)
+    public DeviceInfo(string? path, string? portName, string? description, int port)
     {
         Path = path;
         Description = description;
         Port = port;
+        PortName = portName;
     }
 
     /// <summary>
@@ -31,7 +33,12 @@ public readonly struct DeviceInfo : IEquatable<DeviceInfo>
     /// <summary>
     /// Port.
     /// </summary>
-    public string? Port { get; }
+    public int Port { get; }
+
+    /// <summary>
+    /// PortName.
+    /// </summary>
+    public string? PortName { get; }
 
     /// <summary>
     /// Equals.
@@ -60,8 +67,9 @@ public readonly struct DeviceInfo : IEquatable<DeviceInfo>
     {
         return HashCode.Combine(
             Path?.GetHashCode(StringComparison.Ordinal) ?? 0,
+            PortName?.GetHashCode(StringComparison.Ordinal) ?? 0,
             Description?.GetHashCode(StringComparison.Ordinal) ?? 0,
-            Port?.GetHashCode(StringComparison.Ordinal) ?? 0);
+            Port.GetHashCode());
     }
 
     /// <inheritdoc />
@@ -78,6 +86,7 @@ public readonly struct DeviceInfo : IEquatable<DeviceInfo>
     public bool Equals(DeviceInfo other)
     {
         return Path == other.Path &&
+               PortName == other.PortName &&
                Description == other.Description &&
                Port == other.Port;
     }

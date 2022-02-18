@@ -13,6 +13,8 @@ namespace UsbModule.Win32.IO;
 [SupportedOSPlatform("windows")]
 public partial class FileIO
 {
+    private const string LibraryDll = "kernel32.dll";
+
     [DllImport(LibraryDll, SetLastError = true, CharSet = CharSet.Unicode)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static extern SafeFileHandle CreateFile(

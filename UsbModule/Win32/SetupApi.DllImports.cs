@@ -12,6 +12,8 @@ namespace UsbModule.Win32;
 [SupportedOSPlatform("windows")]
 public partial class SetupApi
 {
+    private const string LibraryDll = "setupapi.dll";
+
     [DllImport(LibraryDll, CharSet = CharSet.Auto)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static extern IntPtr SetupDiGetClassDevs(

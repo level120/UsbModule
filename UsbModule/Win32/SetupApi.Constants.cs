@@ -11,8 +11,6 @@ namespace UsbModule.Win32;
 [SupportedOSPlatform("windows")]
 public partial class SetupApi
 {
-    private const string LibraryDll = "setupapi.dll";
-
     /// <summary>
     /// SPDRP.
     /// </summary>

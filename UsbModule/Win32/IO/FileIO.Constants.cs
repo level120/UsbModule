@@ -28,6 +28,4 @@ public partial class FileIO
 
     /// <summary>ERROR_IO_INCOMPLETE.</summary>
     public const int ErrorIOImcomplete = 996;
-
-    private const string LibraryDll = "kernel32.dll";
 }
