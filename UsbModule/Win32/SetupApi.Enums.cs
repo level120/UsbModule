@@ -1,5 +1,8 @@
 using System.Runtime.Versioning;
 
+#pragma warning disable CA1028 // Enum Storage should be Int32
+#pragma warning disable CA1052 // Static holder types should be Static or NotInheritable
+
 namespace UsbModule.Win32;
 
 /// <summary>

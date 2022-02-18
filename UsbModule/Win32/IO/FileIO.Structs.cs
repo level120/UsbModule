@@ -1,8 +1,14 @@
 using System.Runtime.Versioning;
 
+// Enum warning
+#pragma warning disable RCS1135 // Declare enum member with zero value (when enum has FlagsAttribute).
+#pragma warning disable CA1028 // Enum Storage should be Int32
+#pragma warning disable CA1008 // Enums should have zero value
+
 #pragma warning disable RCS1237 // Use bit shift operator.
 #pragma warning disable SA1602 // Enumeration items should be documented
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CA1052 // Static holder types should be Static or NotInheritable
 
 namespace UsbModule.Win32.IO;
 
@@ -18,7 +24,6 @@ public partial class FileIO
     [Flags]
     public enum FileAccess : uint
     {
-        None = 0,
         All = 0x10000000,
         Execute = 0x20000000,
         Write = 0x40000000,
@@ -31,7 +36,6 @@ public partial class FileIO
     [Flags]
     public enum FileShareMode : uint
     {
-        None = 0,
         Read = 0x00000001,
         Write = 0x00000002,
         Delete = 0x00000004,
@@ -55,7 +59,6 @@ public partial class FileIO
     [Flags]
     public enum FileAttributes : uint
     {
-        None = 0,
         Readonly = 0x00000001,
         Hidden = 0x00000002,
         System = 0x00000004,

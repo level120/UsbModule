@@ -1,6 +1,10 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
+#pragma warning disable CA1034 // Nested types should not be visible
+#pragma warning disable CA1815 // Override equals and operator equals on value types
+#pragma warning disable CA1052 // Static holder types should be Static or NotInheritable
+
 namespace UsbModule.Win32;
 
 /// <summary>

@@ -1,5 +1,8 @@
 using System.Runtime.Versioning;
 
+#pragma warning disable CA1052 // Static holder types should be Static or NotInheritable
+#pragma warning disable CA1724 // Type names should not match namespaces
+
 namespace UsbModule.Win32.IO;
 
 /// <summary>

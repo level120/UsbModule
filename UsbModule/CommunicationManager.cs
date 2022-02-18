@@ -6,6 +6,7 @@ using System.Runtime.Versioning;
 using UsbModule.Win32;
 using UsbModule.Win32.IO;
 
+#pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
 #pragma warning disable SA1129 // Do not use default value type constructor
 
@@ -17,7 +18,7 @@ namespace UsbModule;
 [SupportedOSPlatform("windows")]
 public sealed class UsbCommunicationManager : IDisposable
 {
-    private const int Timeout = 1_000;
+    private const int Timeout = 10_000;
 
     // USB 1.1 WriteFile maximum block size is 4096
     // USB 1.1 ReadFile in block chunks of 64 bytes
@@ -32,49 +33,25 @@ public sealed class UsbCommunicationManager : IDisposable
     }
 
     /// <summary>
-    /// USB Interface Class ID.
-    /// </summary>
-    public Guid ClassId { get; private init; }
-
-    /// <summary>
-    /// 인터페이스 이름.
-    /// </summary>
-    public string? InterfaceName { get; private init; }
-
-    /// <summary>
-    /// 장치 ID.
-    /// </summary>
-    public string? ProductID { get; private init; }
-
-    /// <summary>
     /// Handle.
     /// </summary>
     public SafeFileHandle? Handle { get; private set; }
 
     /// <summary>
-    /// 입력한 인자정보를 이용해 USB 통신 환경을 구성합니다.
+    /// USB 통신 환경을 구성합니다.
     /// </summary>
-    /// <param name="interfaceClassGuid">USB Interface Class ID.</param>
-    /// <param name="interfaceName">장치 이름.</param>
-    /// <param name="productId">장치 ID.</param>
+    /// <param name="deviceInfo">Device info.</param>
     /// <returns><see cref="UsbCommunicationManager"/>.</returns>
-    public static UsbCommunicationManager? Open(
-        Guid interfaceClassGuid, string? interfaceName, string? productId)
+    public static UsbCommunicationManager? Open(DeviceInfo deviceInfo)
     {
-        var handle = GetHandle(interfaceClassGuid, interfaceName, productId);
+        var handle = GetHandle(deviceInfo);
 
-        if (handle?.IsInvalid != false)
+        if (handle == null)
         {
             return null;
         }
 
-        return new UsbCommunicationManager
-        {
-            Handle = handle,
-            ClassId = interfaceClassGuid,
-            InterfaceName = interfaceName,
-            ProductID = productId,
-        };
+        return new UsbCommunicationManager { Handle = handle };
     }
 
     /// <summary>
@@ -182,16 +159,22 @@ public sealed class UsbCommunicationManager : IDisposable
     /// </summary>
     /// <param name="buffer">데이터 버퍼.</param>
     /// <returns>작업수행 결과.</returns>
+    /// <exception cref="Win32Exception">빈 데이터 사용시.</exception>
     public bool Write(params byte[] buffer)
     {
         var handle = Handle!.DangerousGetHandle();
 
         FileIO.CancelIo(handle);
 
+        if (buffer == null || buffer.Length == 0)
+        {
+            throw new Win32Exception("빈 데이터를 입력할 수 없습니다.");
+        }
+
         var bytes = new byte[buffer.Length];
         Array.Copy(buffer, 0, bytes, 0, buffer.Length);
 
-        var wo = new ManualResetEvent(false);
+        using var wo = new ManualResetEvent(false);
         var ov = new NativeOverlapped
         {
             EventHandle = wo.GetSafeWaitHandle().DangerousGetHandle(),
@@ -217,7 +200,7 @@ public sealed class UsbCommunicationManager : IDisposable
         var readBuffer = new byte[BufferSize];
         Array.Clear(readBuffer, 0, readBuffer.Length);
 
-        var sg = new AutoResetEvent(false);
+        using var sg = new AutoResetEvent(false);
         var ov = new NativeOverlapped
         {
             OffsetLow = 0,
@@ -259,37 +242,20 @@ public sealed class UsbCommunicationManager : IDisposable
         Close();
     }
 
-    private static SafeFileHandle? GetHandle(Guid interfaceClassGuid, string? interfaceName, string? productId)
+    /// <summary>
+    /// <see cref="DeviceInfo"/>를 이용해 Handle을 구성합니다.
+    /// </summary>
+    /// <param name="deviceInfo">Device 정보.</param>
+    /// <returns>Handle.</returns>
+    private static SafeFileHandle? GetHandle(DeviceInfo deviceInfo)
     {
-        if (string.IsNullOrWhiteSpace(interfaceName))
-        {
-            throw new ArgumentException("빈 값은 사용할 수 없습니다.", interfaceName);
-        }
-
-        if (string.IsNullOrWhiteSpace(productId))
-        {
-            throw new ArgumentException("빈 값은 사용할 수 없습니다.", productId);
-        }
-
-        // 네트워크 주소?
-        if (interfaceName.StartsWith("\\", StringComparison.InvariantCultureIgnoreCase))
-        {
-            return null;
-        }
-
-        var devices = GetDevices(interfaceClassGuid, SetupApi.Digcf.DeviceInterface | SetupApi.Digcf.AllClasses);
-        var devicePath = devices
-            .FirstOrDefault(device => device.Value.Path?.Contains(productId, StringComparison.OrdinalIgnoreCase) ?? false)
-            .Value
-            .Path;
-
-        if (string.IsNullOrEmpty(devicePath))
+        if (string.IsNullOrEmpty(deviceInfo.Path))
         {
             return null;
         }
 
         return FileIO.CreateFile(
-            devicePath,
+            deviceInfo.Path,
             FileIO.FileAccess.Write | FileIO.FileAccess.Read,
             FileIO.FileShareMode.Read,
             IntPtr.Zero,
