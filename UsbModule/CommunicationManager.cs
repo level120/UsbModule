@@ -1,14 +1,11 @@
 using Microsoft.Win32;
-using Microsoft.Win32.SafeHandles;
-using System.ComponentModel;
+using PInvoke;
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using UsbModule.Win32;
-using UsbModule.Win32.IO;
 
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
-#pragma warning disable SA1129 // Do not use default value type constructor
+#pragma warning disable S1481 // Unused local variables should be removed
 
 namespace UsbModule;
 
@@ -48,8 +45,6 @@ namespace UsbModule;
 [SupportedOSPlatform("windows")]
 public sealed class UsbCommunicationManager : IDisposable
 {
-    private const int Timeout = 10_000;
-
     // USB 1.1 WriteFile maximum block size is 4096
     // USB 1.1 ReadFile in block chunks of 64 bytes
     // USB 2.0 ReadFile in block chunks of 512 bytes
@@ -65,7 +60,7 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <summary>
     /// Handle.
     /// </summary>
-    public SafeFileHandle? Handle { get; private set; }
+    public Kernel32.SafeObjectHandle? Handle { get; private set; }
 
     /// <summary>
     /// USB 통신 환경을 구성합니다.
@@ -91,63 +86,66 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <param name="flags">flags.</param>
     /// <returns>장치 목록 Dictionary.</returns>
     /// <exception cref="Win32Exception">장치 식별 실패 시.</exception>
-    public static Dictionary<string, DeviceInfo> GetDevices(Guid interfaceClassGuid, SetupApi.Digcf flags)
+    public static unsafe IReadOnlyDictionary<string, DeviceInfo> GetDevices(
+        Guid interfaceClassGuid, SetupApi.GetClassDevsFlags flags)
     {
         var devices = new Dictionary<string, DeviceInfo>();
 
-        IntPtr device;
+        SetupApi.SafeDeviceInfoSetHandle device;
 
         try
         {
-            device = SetupApi.SetupDiGetClassDevs(ref interfaceClassGuid, null, IntPtr.Zero, (uint)flags);
+            device = SetupApi.SetupDiGetClassDevs(&interfaceClassGuid, null, IntPtr.Zero, flags);
         }
         catch
         {
-            device = (IntPtr)FileIO.InvalidHandleValue;
+            device = SetupApi.SafeDeviceInfoSetHandle.Invalid;
         }
 
-        if (device == (IntPtr)FileIO.InvalidHandleValue)
+        if (device == SetupApi.SafeDeviceInfoSetHandle.Invalid)
         {
             return devices;
         }
 
-        var deviceIndex = default(uint);
-        var deviceInterfaceData = new SetupApi.SpDeviceInterfaceData();
+        var deviceIndex = default(int);
+        var deviceInterfaceData = SetupApi.SP_DEVICE_INTERFACE_DATA.Create();
 
         try
         {
-            while (SetupApi.SetupDiEnumDeviceInterfaces(device, 0, ref interfaceClassGuid, deviceIndex, ref deviceInterfaceData))
+            while (SetupApi.SetupDiEnumDeviceInterfaces(
+                       device, IntPtr.Zero, ref interfaceClassGuid, deviceIndex, ref deviceInterfaceData))
             {
                 ++deviceIndex;
 
-                SetupApi.SetupDiGetDeviceInterfaceDetail(
-                    device, ref deviceInterfaceData, IntPtr.Zero, 0, out var size, IntPtr.Zero);
+                int size;
 
-                if (size == 0 || size > Marshal.SizeOf(typeof(SetupApi.SpDeviceInterfaceDetailData)) - sizeof(uint))
+                SetupApi.SetupDiGetDeviceInterfaceDetail(device, ref deviceInterfaceData, null, 0, &size, null);
+
+                if (size == 0)
                 {
                     continue;
                 }
 
-                var interfaceDetail = new SetupApi.SpDeviceInterfaceDetailData();
-                var devInfoData = new SetupApi.SpDevInfoData();
+                var interfaceDetail = default(SetupApi.SP_DEVICE_INTERFACE_DETAIL_DATA);
+                var devInfoData = SetupApi.SP_DEVINFO_DATA.Create();
 
                 var isSuccess = SetupApi.SetupDiGetDeviceInterfaceDetail(
-                    device, ref deviceInterfaceData, ref interfaceDetail, size, out _, ref devInfoData);
+                    device, ref deviceInterfaceData, &interfaceDetail, size, null, &devInfoData);
 
                 if (!isSuccess)
                 {
                     throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
-                var path = interfaceDetail.DevicePath;
-                var name = Win32Api.GetDeviceRegistryProperty(
-                    device, ref devInfoData, SetupApi.Spdrp.LocationInformation);
-
+                var name3 = interfaceClassGuid;
+                var name2 = devInfoData.ClassGuid;
+                var name = deviceInterfaceData.InterfaceClassGuid;
+                var path = interfaceDetail.DevicePath->ToString();
                 var portName = string.Empty;
                 var desc = string.Empty;
                 var port = 0;
 
-                if (path!.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+                if (path.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
                 {
                     var key = string.Concat("##?#", path.AsSpan(4));
 
@@ -174,17 +172,19 @@ public sealed class UsbCommunicationManager : IDisposable
                     }
                 }
 
-                devices[name] = new DeviceInfo(path, portName, desc, port);
+                devices[name.ToString()] = new DeviceInfo(path, portName, desc, port);
             }
-
-            SetupApi.SetupDiDestroyDeviceInfoList(device);
         }
         catch
         {
             // ignore
         }
+        finally
+        {
+            device.Dispose();
+        }
 
-        return devices;
+        return new ReadOnlyDictionary<string, DeviceInfo>(devices);
     }
 
     /// <summary>
@@ -193,66 +193,28 @@ public sealed class UsbCommunicationManager : IDisposable
     /// <param name="buffer">데이터 버퍼.</param>
     /// <returns>작업수행 결과.</returns>
     /// <exception cref="Win32Exception">빈 데이터 사용시.</exception>
-    public bool Write(params byte[] buffer)
+    public bool Write(ArraySegment<byte> buffer)
     {
-        var handle = Handle!.DangerousGetHandle();
+        Kernel32.CancelIo(Handle);
 
-        FileIO.CancelIo(handle);
-
-        if (buffer == null || buffer.Length == 0)
+        if (buffer.Count == 0)
         {
-            throw new Win32Exception("빈 데이터를 입력할 수 없습니다.");
+            throw new Win32Exception();
         }
 
-        var bytes = new byte[buffer.Length];
-        Array.Copy(buffer, 0, bytes, 0, buffer.Length);
-
-        using var wo = new ManualResetEvent(false);
-        var ov = new NativeOverlapped
-        {
-            EventHandle = wo.GetSafeWaitHandle().DangerousGetHandle(),
-        };
-
-        if (!FileIO.WriteFile(handle, bytes, (uint)bytes.Length, out _, ref ov) &&
-            Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
-        {
-            wo.WaitOne(Timeout, false);
-        }
-
-        return FileIO.GetOverlappedResult(handle, ref ov, out var size, true) && size == buffer.LongLength;
+        return Kernel32.WriteFile(Handle, buffer) == buffer.Count;
     }
 
     /// <summary>
     /// USB로부터 데이터를 전달받습니다.
     /// </summary>
     /// <returns>수신된 데이터.</returns>
-    public byte[] Read()
+    public ArraySegment<byte> Read()
     {
-        var handle = Handle!.DangerousGetHandle();
+        var readData = new ArraySegment<byte>(new byte[BufferSize]);
+        var readLength = Kernel32.ReadFile(Handle, readData);
 
-        var readBuffer = new byte[BufferSize];
-        Array.Clear(readBuffer, 0, readBuffer.Length);
-
-        using var sg = new AutoResetEvent(false);
-        var ov = new NativeOverlapped
-        {
-            OffsetLow = 0,
-            OffsetHigh = 0,
-            EventHandle = sg.GetSafeWaitHandle().DangerousGetHandle(),
-        };
-
-        if (!FileIO.ReadFile(handle, readBuffer, BufferSize, out _, ref ov) &&
-            Marshal.GetLastWin32Error() == FileIO.ErrorIOPending)
-        {
-            sg.WaitOne(Timeout, false);
-        }
-
-        FileIO.GetOverlappedResult(handle, ref ov, out var readLength, false);
-
-        var readData = new byte[readLength];
-        Array.Copy(readBuffer, readData, readLength);
-
-        return readData;
+        return readData.Slice(0, readLength);
     }
 
     /// <summary>
@@ -280,20 +242,20 @@ public sealed class UsbCommunicationManager : IDisposable
     /// </summary>
     /// <param name="deviceInfo">Device 정보.</param>
     /// <returns>Handle.</returns>
-    private static SafeFileHandle? GetHandle(DeviceInfo deviceInfo)
+    private static Kernel32.SafeObjectHandle? GetHandle(DeviceInfo deviceInfo)
     {
         if (string.IsNullOrEmpty(deviceInfo.Path))
         {
             return null;
         }
 
-        return FileIO.CreateFile(
+        return Kernel32.CreateFile(
             deviceInfo.Path,
-            FileIO.FileAccess.Write | FileIO.FileAccess.Read,
-            FileIO.FileShareMode.Read,
+            Kernel32.FileAccess.FILE_GENERIC_READ | Kernel32.FileAccess.FILE_GENERIC_WRITE,
+            Kernel32.FileShare.FILE_SHARE_READ,
             IntPtr.Zero,
-            FileIO.FileCreationDisposition.OpenAlways,
-            FileIO.FileAttributes.Normal | FileIO.FileAttributes.SequentialScan | FileIO.FileAttributes.Overlapped,
-            IntPtr.Zero);
+            Kernel32.CreationDisposition.OPEN_ALWAYS,
+            Kernel32.CreateFileFlags.FILE_ATTRIBUTE_NORMAL | Kernel32.CreateFileFlags.FILE_FLAG_SEQUENTIAL_SCAN | Kernel32.CreateFileFlags.FILE_FLAG_OVERLAPPED,
+            Kernel32.SafeObjectHandle.Null);
     }
 }
