@@ -61,6 +61,9 @@ dotnet_diagnostic.SA1005.severity = suggestion
 # SA1101: Prefix local calls with this
 dotnet_diagnostic.SA1101.severity = silent
 
+# SA1129: Do not use default value type constructor
+dotnet_diagnostic.SA1129.severity = silent
+
 # SA1200: Using directives should be placed correctly
 dotnet_diagnostic.SA1200.severity = silent
 

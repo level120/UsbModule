@@ -1,93 +1,71 @@
+using System.Runtime.Versioning;
+
 namespace UsbModule.Win32;
 
 /// <summary>
 /// Device information.
 /// </summary>
-public readonly struct DeviceInfo : IEquatable<DeviceInfo>
+[SupportedOSPlatform(GlobalDefinition.SupportForWindows)]
+public record DeviceInfo
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DeviceInfo"/> struct.
+    /// Device Type.
     /// </summary>
-    /// <param name="path">path.</param>
-    /// <param name="portName">base name.</param>
-    /// <param name="description">description.</param>
-    /// <param name="port">port.</param>
-    public DeviceInfo(string? path, string? portName, string? description, int port)
-    {
-        Path = path;
-        Description = description;
-        Port = port;
-        PortName = portName;
-    }
+    public string? DeviceType { get; init; }
+
+    /// <summary>
+    /// Device Instance ID.
+    /// </summary>
+    public string? DeviceInstanceId { get; init; }
+
+    /// <summary>
+    /// Device Unique ID.
+    /// </summary>
+    public string? DeviceUniqueId { get; init; }
+
+    /// <summary>
+    /// Device Desc.
+    /// </summary>
+    public string? DeviceDesc { get; init; }
 
     /// <summary>
     /// Path.
     /// </summary>
-    public string? Path { get; }
+    public string? Path { get; init; }
 
     /// <summary>
-    /// Description.
+    /// Port Description.
     /// </summary>
-    public string? Description { get; }
+    public string? PortDescription { get; private set; }
 
     /// <summary>
     /// Port.
     /// </summary>
-    public int Port { get; }
+    public int? Port { get; private set; }
 
     /// <summary>
     /// PortName.
     /// </summary>
-    public string? PortName { get; }
+    public string? PortName { get; private set; }
 
     /// <summary>
-    /// Equals.
+    /// Service.
     /// </summary>
-    /// <param name="left">left.</param>
-    /// <param name="right">right.</param>
-    /// <returns>equals.</returns>
-    public static bool operator ==(DeviceInfo left, DeviceInfo right)
-    {
-        return left.Equals(right);
-    }
+    public string? Service { get; init; }
 
     /// <summary>
-    /// Not equals.
+    /// Update class info.
     /// </summary>
-    /// <param name="left">left.</param>
-    /// <param name="right">right.</param>
-    /// <returns>Not equals.</returns>
-    public static bool operator !=(DeviceInfo left, DeviceInfo right)
+    /// <param name="port">port.</param>
+    /// <param name="portName">port name.</param>
+    /// <param name="portDescription">port description.</param>
+    /// <returns>this.</returns>
+    public DeviceInfo UpdateClassInfo(int? port, string? portName, string? portDescription)
     {
-        return !(left == right);
-    }
+        Port = port;
+        PortName = portName;
+        PortDescription = portDescription;
 
-    /// <inheritdoc />
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(
-            Path?.GetHashCode(StringComparison.Ordinal) ?? 0,
-            PortName?.GetHashCode(StringComparison.Ordinal) ?? 0,
-            Description?.GetHashCode(StringComparison.Ordinal) ?? 0,
-            Port.GetHashCode());
-    }
-
-    /// <inheritdoc />
-    public override bool Equals(object? obj)
-    {
-        return obj is DeviceInfo deviceInfo && Equals(deviceInfo);
-    }
-
-    /// <summary>
-    /// Equals.
-    /// </summary>
-    /// <param name="other">other.</param>
-    /// <returns>Equals.</returns>
-    public bool Equals(DeviceInfo other)
-    {
-        return Path == other.Path &&
-               PortName == other.PortName &&
-               Description == other.Description &&
-               Port == other.Port;
+        return this;
     }
 }

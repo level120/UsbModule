@@ -5,7 +5,7 @@ namespace UsbModule.Win32.Identifier;
 /// <summary>
 /// Windows에서 제공하는 식별자.
 /// </summary>
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(GlobalDefinition.SupportForWindows)]
 public static class DeviceSetupClasses
 {
     /// <summary>

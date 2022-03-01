@@ -1,8 +1,11 @@
+using System.Runtime.Versioning;
+
 namespace UsbModule.Win32.Identifier;
 
 /// <summary>
 /// PNP 식별자 정의.
 /// </summary>
+[SupportedOSPlatform(GlobalDefinition.SupportForWindows)]
 public static class PnpIdentifier
 {
     /// <summary>

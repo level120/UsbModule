@@ -15,16 +15,16 @@ var devices = UsbCommunicationManager.GetDevices(
     DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_ALLCLASSES);
 
 // 통신할 장치 선택
-var device = devices.Values
-    .FirstOrDefault(device => device.Path?.Contains(id, StringComparison.OrdinalIgnoreCase) ?? false);
+var device = devices.FirstOrDefault(
+    device => device.DeviceInstanceId?.Contains(id, StringComparison.OrdinalIgnoreCase) ?? false);
 
 // 통신을 위한 매니저 생성
 using var manager = UsbCommunicationManager.Open(device);
 
 // 핸들 가져오기에 실패한 경우
-if (manager == null)
+if (manager.IsInvalid)
 {
-    throw new Win32Exception();
+    throw new InvalidDataException("Invalid handle.");
 }
 
 // USB에 데이터 쓰기(byte[])
