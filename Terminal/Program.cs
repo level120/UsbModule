@@ -1,7 +1,8 @@
 using PInvoke;
 using System.Text;
 using UsbModule;
-using UsbModule.Win32.Identifier;
+
+#pragma warning disable S1481 // Unused local variables should be removed
 
 var id = "3A21";
 
@@ -9,6 +10,10 @@ var command = new byte[]
 {
     0x1d, 0x49, 0x02,
 };
+
+// 장치 가져오기(Flag 조합 이용)
+var devices1 = UsbCommunicationManager.GetDevices(
+    DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_ALLCLASSES);
 
 // 장치 가져오기(Flag 조합 이용)
 var devices = UsbCommunicationManager.GetDevices(
@@ -27,12 +32,18 @@ if (manager.IsInvalid)
     throw new InvalidDataException("Invalid handle.");
 }
 
-// USB에 데이터 쓰기(byte[])
-var isSuccess = manager.Write(command);
+// 지연시간 반복 테스트
+var loop = 100;
 
-Console.WriteLine($"Write result : {isSuccess}");
+while (loop-- > 0)
+{
+    // USB에 데이터 쓰기(byte[])
+    var isSuccess = manager.Write(command);
 
-// USB로부터 데이터 읽기(byte[])
-var readString = manager.Read();
+    Console.WriteLine($"Write result : {isSuccess}");
 
-Console.WriteLine(Encoding.Default.GetString(readString));
+    // USB로부터 데이터 읽기(byte[])
+    var readString = manager.Read();
+
+    Console.WriteLine(Encoding.Default.GetString(readString));
+}

@@ -1,4 +1,6 @@
-# USB Communication for C#
+# USB Printer Communication for C#
+
+* usbprint.sys
 
 # Requirement
 
@@ -12,28 +14,39 @@
 You can use on the Console, WinForm and WPF application!
 
 ```cs
+// My device id.
+var id = "3A21";
+
+// My device command.
+var command = new byte[]
+{
+    0x1d, 0x49, 0x02,
+};
+
 // Enumerates usb devices under the device set up class with flag
 var devices = UsbCommunicationManager.GetDevices(
-    DeviceSetupClasses.UsbPrinter, SetupApi.Digcf.DeviceInterface | SetupApi.Digcf.AllClasses);
+    DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_ALLCLASSES);
 
 // Choose device
-var device = devices.Values
-    .FirstOrDefault(device => device.Path?.Contains(id, StringComparison.OrdinalIgnoreCase) ?? false);
+var device = devices.FirstOrDefault(
+    device => device.DeviceInstanceId?.Contains(id, StringComparison.OrdinalIgnoreCase) ?? false);
 
 // Open communication manager
 using var manager = UsbCommunicationManager.Open(device);
 
 // Fail to get handle
-if (manager == null)
+if (manager.IsInvalid)
 {
-    throw new Win32Exception("Handle을 가져올 수 없습니다.");
+    throw new InvalidDataException("Invalid handle.");
 }
 
 // Writing to USB(byte[])
 var isSuccess = manager.Write(command);
+
 Console.WriteLine($"Write result : {isSuccess}");
 
 // Reading from USB(byte[])
 var readString = manager.Read();
+
 Console.WriteLine(Encoding.Default.GetString(readString));
 ```

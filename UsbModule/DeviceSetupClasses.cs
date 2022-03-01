@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
 
-namespace UsbModule.Win32.Identifier;
+namespace UsbModule;
 
 /// <summary>
 /// Windows에서 제공하는 식별자.

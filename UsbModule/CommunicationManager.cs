@@ -1,8 +1,8 @@
 using Microsoft.Win32;
 using PInvoke;
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using UsbModule.Win32;
+
+#pragma warning disable S3869 // "SafeHandle.DangerousGetHandle" should not be called
 
 namespace UsbModule;
 
@@ -29,7 +29,7 @@ namespace UsbModule;
 /// }
 ///
 /// // USB에 데이터 쓰기(byte[])
-/// var isSuccess = manager.Write(new[] { 0x1d, 0x49, 0x02 });
+/// var isSuccess = manager.Write(0x1d, 0x49, 0x02);
 ///
 /// Console.WriteLine($"Write result : {isSuccess}");
 ///
@@ -127,27 +127,64 @@ public sealed class UsbCommunicationManager : IDisposable
     /// </summary>
     /// <param name="buffer">데이터 버퍼.</param>
     /// <returns>작업수행 결과.</returns>
-    /// <exception cref="Win32Exception">빈 데이터 사용시.</exception>
-    public bool Write(params byte[] buffer)
+    /// <exception cref="Win32Exception">IO Cancel 실패 시.</exception>
+    public unsafe bool Write(params byte[] buffer)
     {
         if (!Kernel32.CancelIo(Handle))
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Kernel32.GetLastError());
         }
 
-        return Kernel32.WriteFile(Handle, buffer) == buffer.LongLength;
+        fixed (byte* pBuffer = buffer)
+        {
+            using var waitEvent = new ManualResetEvent(false);
+            var overlapped = new NativeOverlapped
+            {
+                EventHandle = waitEvent.SafeWaitHandle.DangerousGetHandle(),
+            };
+
+            int writeCount;
+            var isSuccess = Kernel32.WriteFile(Handle, pBuffer, buffer.Length, &writeCount, &overlapped);
+
+            if (!isSuccess && Kernel32.GetLastError() == Win32ErrorCode.ERROR_IO_PENDING)
+            {
+                waitEvent.WaitOne();
+            }
+
+            return Kernel32.GetOverlappedResult(Handle, &overlapped, out var transferred, bWait: true) &&
+                   transferred == buffer.LongLength;
+        }
     }
 
     /// <summary>
     /// USB로부터 데이터를 전달받습니다.
     /// </summary>
     /// <returns>수신된 데이터.</returns>
-    public ArraySegment<byte> Read()
+    public unsafe ArraySegment<byte> Read()
     {
-        var readData = new ArraySegment<byte>(new byte[BufferSize]);
-        var readLength = Kernel32.ReadFile(Handle, readData);
+        var buffer = new byte[BufferSize];
 
-        return readData[..readLength];
+        fixed (byte* pBuffer = buffer)
+        {
+            using var waitEvent = new AutoResetEvent(false);
+            var overlapped = new NativeOverlapped
+            {
+                OffsetLow = 0,
+                OffsetHigh = 0,
+                EventHandle = waitEvent.SafeWaitHandle.DangerousGetHandle(),
+            };
+
+            var isSuccess = Kernel32.ReadFile(Handle, pBuffer, buffer.Length, null, &overlapped);
+
+            if (!isSuccess && Kernel32.GetLastError() == Win32ErrorCode.ERROR_IO_PENDING)
+            {
+                waitEvent.WaitOne();
+            }
+
+            Kernel32.GetOverlappedResult(Handle, &overlapped, out var transferred, bWait: true);
+
+            return new ArraySegment<byte>(buffer[..transferred]);
+        }
     }
 
     /// <summary>

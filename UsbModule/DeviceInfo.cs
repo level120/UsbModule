@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
 
-namespace UsbModule.Win32;
+namespace UsbModule;
 
 /// <summary>
 /// Device information.
