@@ -31,30 +31,23 @@ dotnet_diagnostic.CA1305.severity = warning
 
 # CA1014 : Mark assemblies with CLSCompliantAttribute
 # https://docs.microsoft.com/ko-kr/dotnet/fundamentals/code-analysis/quality-rules/ca1014
-# 2022.02.11. [구삼] 이 속성은 프로그램의 요소가 언어별 공용 표준 사양을 준수하는지 나타내는지 확인합니다.
-# 그런데 Mango에서 작업한 추상화 된 객체 및 내부에서 사용하는 인터페이스도 이 사양에 걸려 생산성을 크게 떨어뜨려 None으로 변경합니다.
 dotnet_diagnostic.CA1014.severity = none
 
 # IDE0046: Convert to conditional expression
-# 2022.02.08 [예건] conditional expression 이 if 문보다 가독성이 좋지 않은 경우가 있어, 강제하지 않도록 변경했습니다.
 dotnet_diagnostic.IDE0046.severity = suggestion
 
 # IDE0058: Expression value is never used
-# 2021.11.29 [예건] TODO 비효율적인 부분이 있어, silent 로 처리했다. (https://github.com/dotnet/roslyn/issues/47832)
 dotnet_diagnostic.IDE0058.severity = silent
 
 # IDE0060: Remove unused parameter
-# 2022.02.10 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2131898
 dotnet_diagnostic.IDE0060.severity = warning
 
 # IDE0130: Namespace does not match folder structure
-# 2021.11.29 [예건] TODO Roslyn 이 file-scoped namespaces 를 처리하지 못해 none 로 설정했다. (https://github.com/dotnet/roslyn/issues/54749)
 dotnet_diagnostic.IDE0130.severity = none
 
 # 1.2. Sonar Analyzers (https://rules.sonarsource.com/csharp)
 
 # S125: Sections of code should not be commented out
-# 2022.01.24 [예건] 개발 편의를 위해 코드를 주석처리할 수 있도록 규칙을 무력화합니다.
 dotnet_diagnostic.S125.severity = none
 
 # S1135: Track uses of "TODO" tags
@@ -75,7 +68,6 @@ dotnet_diagnostic.SA1200.severity = silent
 dotnet_diagnostic.SA1309.severity = silent
 
 # SA1512: Single-line comments should not be followed by blank line
-# 2022.02.10 [예건] 코드를 주석처리하고 테스트할 때, 방해되어 warning으로 조정합니다.
 dotnet_diagnostic.SA1512.severity = warning
 
 # SA1600: Elements should be documented
@@ -96,27 +88,22 @@ dotnet_diagnostic.SA1642.severity = none
 # 1.4 Roslynator Analyzers
 
 # RCS1161: Enum should declare explicit values.
-# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
 dotnet_diagnostic.RCS1161.severity = none
 
 # 1.4. Roslynator Analyzers
 
 # RCS1161: Enum should declare explicit values.
-# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
 dotnet_diagnostic.RCS1161.severity = none
 
 # RCS1163: Unused parameter.
-# 2022.02.10 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2131898
 dotnet_diagnostic.RCS1163.severity = warning
 
 # 1.4. Roslynator Analyzers
 
 # RCS1161: Enum should declare explicit values.
-# 2022.01.24 [예건] https://github.com/MANGOSLABCoLtd/Oxygen/discussions/39#discussioncomment-2002282
 dotnet_diagnostic.RCS1161.severity = none
 
 # RCS1181: Convert comment to documentation comment.
-# 2022.02.10 [예건] 코드 위 주석이 반드시 문서 주석일 필요는 없습니다.
 dotnet_diagnostic.RCS1181.severity = suggestion
 
 # 2. Language rules (https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/language-rules)

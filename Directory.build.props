@@ -4,7 +4,6 @@
         <!-- Nullable (https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/language#nullable) -->
         <Nullable>enable</Nullable>
         <Deterministic>true</Deterministic>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <!-- report errors and warnings (https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings) -->
         <WarningLevel>5</WarningLevel>
     </PropertyGroup>
@@ -20,11 +19,6 @@
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <AnalysisMode>All</AnalysisMode>
         <AnalysisLevel>latest</AnalysisLevel>
-    </PropertyGroup>
-
-    <!-- StyleCop SA0001 (https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA0001.md) -->
-    <PropertyGroup>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <!-- TF_BUILD (https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml#system-variables-devops-services) -->
