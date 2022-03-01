@@ -1,8 +1,20 @@
 using PInvoke;
 using System.Text;
+using Tababular;
+using Terminal;
 using UsbModule;
+using UsbModule.Win32;
 
-#pragma warning disable S1481 // Unused local variables should be removed
+var formatter = new TableFormatter();
+
+/* ========= Getting printer list sample ========= */
+
+// 프린터 장치 목록
+var printers = WinSpool.GetPrinters(WinSpool.PrinterOptions.PrinterEnumLocal);
+
+Console.WriteLine(formatter.FormatObjects(printers.ApplyFormat()));
+
+/* ========= USB Communication sample ========= */
 
 var id = "3A21";
 
@@ -12,12 +24,8 @@ var command = new byte[]
 };
 
 // 장치 가져오기(Flag 조합 이용)
-var devices1 = UsbCommunicationManager.GetDevices(
-    DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_ALLCLASSES);
-
-// 장치 가져오기(Flag 조합 이용)
 var devices = UsbCommunicationManager.GetDevices(
-    DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_ALLCLASSES);
+    DeviceSetupClasses.UsbPrinter, SetupApi.GetClassDevsFlags.DIGCF_DEVICEINTERFACE | SetupApi.GetClassDevsFlags.DIGCF_PRESENT);
 
 // 통신할 장치 선택
 var device = devices.FirstOrDefault(
@@ -33,7 +41,7 @@ if (manager.IsInvalid)
 }
 
 // 지연시간 반복 테스트
-var loop = 100;
+var loop = 1;
 
 while (loop-- > 0)
 {
